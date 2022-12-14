@@ -1,0 +1,102 @@
+     1                                  bits 32 ; assembling for the 32 bits architecture
+     2                                  
+     3                                  ; declare the EntryPoint (a label defining the very first instruction of the program)
+     4                                  global start        
+     5                                  
+     6                                  ; declare external functions needed by our program
+     7                                  extern exit               ; tell nasm that exit exists even if we won't be defining it
+     8                                  import exit msvcrt.dll    ; exit is a function that ends the calling process. It is defined in msvcrt.dll
+     9                                                            ; msvcrt.dll contains exit, printf and all the other important C-runtime specific functions
+    10                                  
+    11                                  ; our data is declared here (the variables needed by our program)
+    12                                  segment data use32 class=data
+    13                                      ; ...
+    14 00000000 616E6120617265206D-         text db "ana are mere si un cojoc"
+    14 00000009 65726520736920756E-
+    14 00000012 20636F6A6F63       
+    15                                      len equ $-text
+    16 00000018 00                          wordlen db 0
+    17 00000019 0000                        backup_cx dw 0
+    18 0000001B 00000000                    backup_esi dd 0
+    19 0000001F 00000000                    backup_edi dd 0
+    20 00000023 <res 00000018>              aux1 resb len
+    21 0000003B <res 00000018>              aux2 resb len
+    22 00000053 <res 00000018>              rez resb len
+    23                                      
+    24                                  ;Being given a string of bytes representing a text (succession of words separated by spaces), 
+    25                                  ;determine which words are palindromes (meaning may be interpreted the same way in either forward or reverse direction)
+    26                                  ; ex.: "cojoc", "capac" etc.
+    27                                  
+    28                                      
+    29                                  ; our code starts here
+    30                                  segment code use32 class=code
+    31                                      start:
+    32                                          ; ...
+    33 00000000 B900000000                      mov ecx, 0
+    34 00000005 BE[00000000]                    mov esi, text
+    35 0000000A BF[23000000]                    mov edi, aux1
+    36 0000000F 8A25[18000000]                  mov ah, byte [wordlen]
+    37                                          
+    38                                          while:
+    39 00000015 8A06                                mov al, [esi]
+    40 00000017 46                                  inc esi ; loads in AL the current byte of 
+    41 00000018 3C20                                cmp al, ' ' ; compares the current letter of the string with a space
+    42 0000001A 7412                                je check_palindrom ; if it is a space, it means we reached the end of a word, otherwise it continues with the code
+    43 0000001C AA                                  stosb ; stores in aux1 the words one by one
+    44                                  
+    45 0000001D 80C401                              add ah, 1 ; computing the word's length
+    46 00000020 6683F918                            cmp cx, len
+    47 00000024 0F849B000000                        je end
+    48 0000002A 6641                                inc cx ; if end of word not reached we still have to dec ecx, so our main loop works properly
+    49 0000002C EBE7                                jmp while ; jumping until we reach the end of word
+    50                                              check_palindrom:
+    51 0000002E 893D[23000000]                          mov [aux1], edi ; we need to have our string in a 'variable'
+    52 00000034 8935[1B000000]                          mov [backup_esi], esi
+    53 0000003A 893D[1F000000]                          mov [backup_edi], edi
+    54 00000040 BE[23000000]                            mov esi, aux1 ; we load it into esi to cross it
+    55 00000045 BF[3B000000]                            mov edi, aux2 ; here we will compute the reverse of the word
+    56                                  
+    57 0000004A 8825[18000000]                          mov [wordlen], ah; we'll need it in order to parse the words
+    58                                  
+    59 00000050 FD                                      std ; setting DF=1 so that we can take the string from aux1 in reverse order
+    60                                  
+    61 00000051 66890D[19000000]                        mov [backup_cx], cx ; backing up cx so we now where we are left
+    62 00000058 66B90000                                mov cx, 0
+    63 0000005C 8A0D[18000000]                          mov cl, [wordlen]
+    64                                                  while2:
+    65 00000062 AC                                          lodsb 
+    66 00000063 AA                                          stosb ; loading string from aux1 in reverse
+    67 00000064 E2FC                                    loop while2
+    68 00000066 8A0D[18000000]                          mov cl, [wordlen] ; now we will check if aux1=aux2 letter by letter
+    69 0000006C FC                                      cld ; we go from start to end this time
+    70 0000006D BE[23000000]                            mov esi, aux1
+    71 00000072 66B90000                                mov cx, 0
+    72 00000076 8A0D[18000000]                          mov cl, [wordlen]
+    73                                                  while3:
+    74 0000007C AC                                          lodsb
+    75 0000007D 88C3                                        mov bl, al ; we move into bl the first letter of aux1
+    76 0000007F BE[3B000000]                                mov esi, aux2 ; first letter of aux2 in al 
+    77 00000084 38D8                                        cmp al, bl ; comparing them
+    78 00000086 751E                                        jne end_while3 ; at first letter that's not the same, it goes back to the main loop
+    79 00000088 E2F2                                    loop while3
+    80                                                  ; loading in rez the first word that is a palindrome
+    81 0000008A 8A0D[18000000]                          mov cl, [wordlen]
+    82 00000090 B500                                    mov ch, 0
+    83 00000092 BE[23000000]                            mov esi, aux1
+    84 00000097 BF[53000000]                            mov edi, rez
+    85                                                  load:
+    86 0000009C AC                                          lodsb
+    87 0000009D AA                                          stosb
+    88 0000009E E2FC                                    loop load
+    89 000000A0 893D[53000000]                          mov [rez], edi
+    90                                                  end_while3: ; Here it will restore cx back to the first character that's a space, hence the decrement
+    91 000000A6 668B0D[19000000]                            mov cx, [backup_cx]
+    92 000000AD 6641                                        inc cx
+    93 000000AF 8B35[1B000000]                              mov esi, [backup_esi]
+    94 000000B5 8B3D[1F000000]                              mov edi, [backup_edi]
+    95 000000BB 6683F918                                    cmp cx, len
+    96 000000BF 0F8550FFFFFF                    jne while
+    97                                          end:
+    98                                          ; exit(0)
+    99 000000C5 6A00                            push    dword 0      ; push the parameter for exit onto the stack
+   100 000000C7 FF15[00000000]                  call    [exit]       ; call exit to terminate the program

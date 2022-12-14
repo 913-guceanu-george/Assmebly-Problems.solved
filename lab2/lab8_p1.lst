@@ -1,0 +1,54 @@
+     1                                  bits 32 ; assembling for the 32 bits architecture
+     2                                  
+     3                                  ; declare the EntryPoint (a label defining the very first instruction of the program)
+     4                                  global start        
+     5                                  
+     6                                  ; declare external functions needed by our program
+     7                                  extern exit, scanf, printf
+     8                                  import scanf msvcrt.dll
+     9                                  import exit msvcrt.dll
+    10                                  import printf msvcrt.dll
+    11                                     ; our data is declared here (the variables needed by our program)
+    12                                  section .data use 32
+    13                                      ; ...
+    14 00000000 <res 00000004>              a resd 1
+    15 00000004 <res 00000004>              b resd 1
+    16 00000008 0000                        rez dw 0
+    17 0000000A 256400                      format db "%d", 0
+    18 0000000D 25642B25643D256400          format_rez db "%d+%d=%d", 0
+    19                                  
+    20                                  ; our code starts here
+    21                                  section .code use 32
+    22                                      start:
+    23                                          ;Two natural numbers a and b (a, b: dword, defined in the data segment) are given. Calculate their sum and display the result in the following format: "<a> + <b> = <result>". ;Example: "1 + 2 = 3"
+    24                                          ;The values will be displayed in decimal format (base 10) with sign.
+    25                                          
+    26                                          ;mov eax, [a]
+    27                                          ;add eax, [b]
+    28                                          
+    29 00000000 68[00000000]                    push dword a
+    30 00000005 68[0A000000]                    push dword format
+    31 0000000A FF15[00000000]                  call [scanf]
+    32 00000010 83C408                          add esp, 4*2
+    33                                          
+    34                                          
+    35 00000013 68[04000000]                    push dword b
+    36 00000018 68[0A000000]                    push dword format
+    37 0000001D FF15[00000000]                  call [scanf]
+    38 00000023 83C408                          add esp, 4*2
+    39                                          
+    40                                  
+    41 00000026 B800000000                      mov eax, 0
+    42 0000002B 0305[00000000]                  add eax, [a]
+    43 00000031 0305[04000000]                  add eax, [b]
+    44                                          
+    45 00000037 50                              push dword eax
+    46 00000038 FF35[04000000]                  push dword [b]
+    47 0000003E FF35[00000000]                  push dword [a]
+    48 00000044 68[0D000000]                    push dword format_rez
+    49 00000049 FF15[00000000]                  call[printf]
+    50 0000004F 83C410                          add esp, 4*4
+    51                                          
+    52                                          ; exit(0)
+    53 00000052 6A00                            push    dword 0      ; push the parameter for exit onto the stack
+    54 00000054 FF15[00000000]                  call    [exit]       ; call exit to terminate the program

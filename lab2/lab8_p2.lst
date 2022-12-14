@@ -1,0 +1,83 @@
+     1                                  bits 32 ; assembling for the 32 bits architecture
+     2                                  
+     3                                  ; declare the EntryPoint (a label defining the very first instruction of the program)
+     4                                  global start        
+     5                                  
+     6                                  ; declare external functions needed by our program
+     7                                  extern exit, scanf, printf, fopen, fread, fclose
+     8                                  import scanf msvcrt.dll
+     9                                  import exit msvcrt.dll
+    10                                  import printf msvcrt.dll
+    11                                  import fopen msvcrt.dll
+    12                                  import fread msvcrt.dll
+    13                                  import fclose msvcrt.dll   ; exit is a function that ends the calling process. It is defined in msvcrt.dll
+    14                                                            ; msvcrt.dll contains exit, printf and all the other important C-runtime specific functions
+    15                                  
+    16                                  ; our data is declared here (the variables needed by our program)
+    17                                  segment data use32 class=data
+    18                                      ; ...
+    19 00000000 696E2E74787400              filename db "in.txt", 0
+    20 00000007 00000000                    fd dd 0
+    21 0000000B 4E756D626572206F66-         format db "Number of even digits=%d", 0
+    21 00000014 206576656E20646967-
+    21 0000001D 6974733D256400     
+    22 00000024 7200                        mode db "r", 0
+    23 00000026 <res 00000064>              buff resb 100
+    24 0000008A 00                          count db 0
+    25                                      
+    26                                  
+    27                                  ; our code starts here
+    28                                  segment code use32 class=code
+    29                                      start:
+    30                                          ; ...
+    31                                          ;A text file is given. Read the content of the file, count the number of even digits and display the result on the screen. The name of text file is defined in the data segment.
+    32                                          ; exit(0)
+    33 00000000 68[24000000]                    push dword mode
+    34 00000005 68[00000000]                    push dword filename
+    35 0000000A FF15[00000000]                  call [fopen]
+    36 00000010 83C408                          add esp, 4*2
+    37                                          
+    38 00000013 A3[07000000]                    mov [fd], eax
+    39 00000018 C605[8A000000]00                mov [count], byte 0
+    40                                          
+    41                                          .loop:
+    42 0000001F FF35[07000000]                      push dword [fd]
+    43 00000025 6A64                                push dword 100
+    44 00000027 6A01                                push dword 1
+    45 00000029 68[26000000]                        push dword buff
+    46 0000002E FF15[00000000]                      call [fread]
+    47 00000034 83C410                              add esp, 4*4
+    48                                              
+    49 00000037 83F800                              cmp eax, 0
+    50 0000003A 7430                                je .end
+    51                                              
+    52 0000003C 89C1                                mov ecx, eax
+    53                                              
+    54 0000003E BE[26000000]                        mov esi, buff
+    55                                              .parse:
+    56 00000043 8B1D[8A000000]                          mov ebx, dword [count]
+    57 00000049 AC                                      lodsb
+    58 0000004A 3C30                                    cmp al, "0"
+    59 0000004C 7413                                        je .add_count
+    60 0000004E 3C32                                    cmp al, "2"
+    61 00000050 740F                                        je .add_count
+    62 00000052 3C34                                    cmp al, "4"
+    63 00000054 740B                                        je .add_count
+    64 00000056 3C36                                    cmp al, "6"
+    65 00000058 7407                                        je .add_count
+    66 0000005A 3C38                                    cmp al, "8"
+    67 0000005C 7403                                        je .add_count
+    68 0000005E 49                                      dec ecx
+    69 0000005F EBE2                                    jmp .parse
+    70                                                      .add_count:
+    71 00000061 8005[8A000000]01                                add [count], byte 1
+    72                                                      
+    73 00000068 E2D9                                loop .parse
+    74 0000006A EBB3                            jmp .loop
+    75                                          .end:
+    76 0000006C FF35[8A000000]                  push dword [count]
+    77 00000072 68[0B000000]                    push dword format
+    78 00000077 FF15[00000000]                  call [printf]
+    79 0000007D 83C408                          add esp, 4*2
+    80 00000080 6A00                            push    dword 0      ; push the parameter for exit onto the stack
+    81 00000082 FF15[00000000]                  call    [exit]       ; call exit to terminate the program
